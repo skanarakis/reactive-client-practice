@@ -6,23 +6,16 @@ import com.google.gson.GsonBuilder;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.skanarakis.practice.reactiveclient.model.ImmutableCar;
 import org.skanarakis.practice.reactiveclient.model.ImmutableUser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-
-import java.util.concurrent.TimeUnit;
+import reactor.test.StepVerifier;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 @ExtendWith(SpringExtension.class)
 public class PracticeReactiveClientApplicationTests {
-
-    private static final int DELAY_FOR_WAITING_REACTIVE_CALL = 100;
-    private Logger logger = LoggerFactory.getLogger(PracticeReactiveClientApplicationTests.class);
 
     private static Gson gson;
     private static HttpGetReactiveClient<ImmutableCar> carClient;
@@ -39,7 +32,7 @@ public class PracticeReactiveClientApplicationTests {
     }
 
     @Test
-    public void sendingReactiveRequestForCar_Succeeds() throws InterruptedException {
+    public void sendingReactiveRequestForCar_Succeeds() {
 
         String url = "http://127.0.0.1:8089/car";
         ImmutableCar car = ImmutableCar.builder().model("Honda").year(2010).build();
@@ -49,17 +42,16 @@ public class PracticeReactiveClientApplicationTests {
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/json").withBody(carJson)));
 
-        carClient.sendRequestTo(url).subscribe(aCar -> {
-            logger.info("Reactive Response: \n{}", aCar);
-            Assertions.assertEquals(car, aCar);
-        }, e -> logger.error("Error: {}", e), () -> logger.debug("Completion"));
+        StepVerifier.create(carClient.sendRequestTo(url))
+                .expectSubscription()
+                .expectNext(car)
+                .verifyComplete();
 
-        TimeUnit.MILLISECONDS.sleep(DELAY_FOR_WAITING_REACTIVE_CALL);
         verify(getRequestedFor(urlEqualTo("/car")));
     }
 
     @Test
-    public void sendingReactiveRequestForUser_Succeeds() throws InterruptedException {
+    public void sendingReactiveRequestForUser_Succeeds() {
 
         String url = "http://127.0.0.1:8089/user";
         ImmutableUser user = ImmutableUser.builder().id(111).name("user").build();
@@ -69,12 +61,11 @@ public class PracticeReactiveClientApplicationTests {
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/json").withBody(userJson)));
 
-        userClient.sendRequestTo(url).subscribe(aUser -> {
-            logger.info("Reactive Response: \n{}", aUser);
-            Assertions.assertEquals(user, aUser);
-        }, e -> logger.error("Error: {}", e), () -> logger.debug("Completion"));
+        StepVerifier.create(userClient.sendRequestTo(url))
+                .expectSubscription()
+                .expectNext(user)
+                .verifyComplete();
 
-        TimeUnit.MILLISECONDS.sleep(DELAY_FOR_WAITING_REACTIVE_CALL);
         verify(getRequestedFor(urlEqualTo("/user")));
     }
 }
